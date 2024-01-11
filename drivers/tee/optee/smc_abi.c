@@ -32,6 +32,7 @@
 #include <linux/kmemleak.h>
 #define CREATE_TRACE_POINTS
 #include "optee_trace.h"
+#include <asm/sbi.h>
 
 /*
  * This file implement the SMC ABI used when communicating with secure world
@@ -1412,7 +1413,19 @@ static void optee_smccc_smc(unsigned long a0, unsigned long a1,
 			    unsigned long a6, unsigned long a7,
 			    struct arm_smccc_res *res)
 {
+#ifndef CONFIG_RISCV
 	arm_smccc_smc(a0, a1, a2, a3, a4, a5, a6, a7, res);
+#else
+    pr_warn("optee_smccc_smc - riscv archtecture call sbi rpxy here\n");
+
+	/* Follow the code here https://github.com/ventanamicro/linux/commit/dd079a401532f84a5753828af9bf6a2dc10c8375#diff-06a5bbc4d6f52fa526899420c616095363ce108603272dadd836a036bdb35ab0
+	struct sbiret ret;
+	ret = sbi_ecall(SBI_EXT_OPTEE, a0, a1, a2, a3, a4, a5, a6);
+	res->a0 = ret.error;
+	res->a1 = ret.value;
+	res->a2 = ret.extp1;
+	res->a3 = ret.extp2; */
+#endif
 }
 
 static void optee_smccc_hvc(unsigned long a0, unsigned long a1,
@@ -1421,7 +1434,9 @@ static void optee_smccc_hvc(unsigned long a0, unsigned long a1,
 			    unsigned long a6, unsigned long a7,
 			    struct arm_smccc_res *res)
 {
+#ifndef CONFIG_RISCV
 	arm_smccc_hvc(a0, a1, a2, a3, a4, a5, a6, a7, res);
+#endif
 }
 
 static optee_invoke_fn *get_invoke_func(struct device *dev)
@@ -1624,6 +1639,7 @@ static int optee_probe(struct platform_device *pdev)
 	if (rc)
 		return rc;
 
+#ifndef CONFIG_RISCV
 	if (!optee_msg_api_uid_is_optee_api(invoke_fn)) {
 		pr_warn("api uid mismatch\n");
 		return -EINVAL;
@@ -1667,6 +1683,9 @@ static int optee_probe(struct platform_device *pdev)
 
 		pool = optee_shm_pool_alloc_pages();
 	}
+#else
+	sec_caps |= OPTEE_SMC_SEC_CAP_HAVE_RESERVED_SHM;
+#endif
 
 	/*
 	 * If dynamic shared memory is not available or failed - try static one
