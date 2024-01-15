@@ -1406,6 +1406,37 @@ optee_config_shm_memremap(optee_invoke_fn *invoke_fn, void **memremaped_shm)
 	return rc;
 }
 
+
+#define RPMI_SRVGRP_TEE 0x00008
+enum rpmi_tee_service_id {
+	RPMI_TEE_SRV_GENERAL = 0x01,
+	RPMI_TEE_SRV_ID_MAX_COUNT,
+};
+
+struct sbi_rpxy_ctx {
+	/* transport id */
+	u32 tpid;
+	u32 max_msg_len;
+};
+static struct sbi_rpxy_ctx rpxy_ctx;
+
+struct rpmi_tee_tx {
+	unsigned long a0;
+	unsigned long a1;
+	unsigned long a2;
+	unsigned long a3;
+	unsigned long a4;
+	unsigned long a5;
+	unsigned long a6;
+	unsigned long a7;
+};
+
+struct rpmi_tee_rx {
+	u32 value;
+	u32 extp1;
+	u32 extp2;
+};
+
 /* Simple wrapper functions to be able to use a function pointer */
 static void optee_smccc_smc(unsigned long a0, unsigned long a1,
 			    unsigned long a2, unsigned long a3,
@@ -1416,7 +1447,29 @@ static void optee_smccc_smc(unsigned long a0, unsigned long a1,
 #ifndef CONFIG_RISCV
 	arm_smccc_smc(a0, a1, a2, a3, a4, a5, a6, a7, res);
 #else
+	struct rpmi_tee_tx tx;
+	struct rpmi_tee_rx rx;
+	unsigned long rxmsg_len;
+	int ret;
+	// Use probe to set the tpid and max_msg_len https://github.com/ventanamicro/linux/commit/dd079a401532f84a5753828af9bf6a2dc10c8375#diff-06a5bbc4d6f52fa526899420c616095363ce108603272dadd836a036bdb35ab0R441
+
+	tx.a0 = a0;
+	tx.a1 = a1;
+	tx.a2 = a2;
+	tx.a3 = a3;
+	tx.a4 = a4;
+	tx.a5 = a5;
+	tx.a6 = a6;
+	tx.a7 = a7;
     pr_warn("optee_smccc_smc - riscv archtecture call sbi rpxy here\n");
+	ret = sbi_rpxy_send_normal_message(rpxy_ctx.tpid,
+					   RPMI_SRVGRP_TEE,
+					   RPMI_TEE_SRV_GENERAL,
+					   &tx, sizeof(struct rpmi_tee_tx), &rx, &rxmsg_len);
+	res->a0 = ret;
+	res->a1 = rx.value;
+	res->a2 = rx.extp1;
+	res->a3 = rx.extp2;
 
 	/* Follow the code here https://github.com/ventanamicro/linux/commit/dd079a401532f84a5753828af9bf6a2dc10c8375#diff-06a5bbc4d6f52fa526899420c616095363ce108603272dadd836a036bdb35ab0
 	struct sbiret ret;
@@ -1617,6 +1670,38 @@ static inline int optee_load_fw(struct platform_device *pdev,
 }
 #endif
 
+static int sbi_rpxy_tee_probe(struct platform_device *pdev)
+{
+	u32 tpid;
+	long max_msg_len;
+	int ret, num_clocks, clkid;
+	struct clk_hw *hw_ptr;
+	struct clk_hw_onecell_data *clk_data;
+
+	if ((sbi_spec_version < sbi_mk_version(1, 0)) ||
+		sbi_probe_extension(SBI_EXT_RPXY) <= 0) {
+		dev_err(&pdev->dev, "sbi rpxy extension not present\n");
+		return -ENODEV;
+	}
+
+	ret = of_property_read_u32(pdev->dev.of_node,
+				   "riscv,sbi-rpxy-transport-id",
+				   &tpid);
+	if (ret)
+		return -EINVAL;
+
+	ret = sbi_rpxy_srvgrp_probe(tpid, RPMI_SRVGRP_TEE, &max_msg_len);
+	if (!max_msg_len) {
+		dev_err(&pdev->dev, "RPMI TEE Service Group Probe Failed\n");
+		return -ENODEV;
+	}
+
+	rpxy_ctx.tpid = tpid;
+	rpxy_ctx.max_msg_len = max_msg_len;
+
+	return ret;
+}
+
 static int optee_probe(struct platform_device *pdev)
 {
 	optee_invoke_fn *invoke_fn;
@@ -1630,6 +1715,10 @@ static int optee_probe(struct platform_device *pdev)
 	u32 arg_cache_flags;
 	u32 sec_caps;
 	int rc;
+
+	rc = sbi_rpxy_tee_probe(pdev);
+	if (rc)
+		return rc;
 
 	invoke_fn = get_invoke_func(&pdev->dev);
 	if (IS_ERR(invoke_fn))
