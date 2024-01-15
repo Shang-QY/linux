@@ -59,11 +59,11 @@ int sbi_rpxy_send_normal_message(u32 transportid, u32 srvgrpid, u8 srvid,
 	get_cpu();
 	if (tx_msglen)
 		memcpy(rpxy->shmem, tx, tx_msglen);
-
+printk("sbi_rpxy_send_normal_message before\n");
 	/* Shared memory is copied with message data at 0x0 offset */
 	sret = sbi_ecall(SBI_EXT_RPXY, SBI_EXT_RPXY_SEND_NORMAL_MSG,
 			 transportid, srvgrpid, srvid, tx_msglen, 0, 0);
-
+printk("sbi_rpxy_send_normal_message after\n");
 	if (!sret.error && rx) {
 		memcpy(rx, rpxy->shmem, sret.value);
 		if (rx_msglen)

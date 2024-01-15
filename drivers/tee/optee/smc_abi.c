@@ -1409,7 +1409,9 @@ optee_config_shm_memremap(optee_invoke_fn *invoke_fn, void **memremaped_shm)
 
 #define RPMI_SRVGRP_TEE 0x00008
 enum rpmi_tee_service_id {
-	RPMI_TEE_SRV_GENERAL = 0x01,
+	RPMI_TEE_SRV_TEE_VERSION     = 0x01,
+    RPMI_TEE_SRV_TEE_COMMUNICATE = 0x02,
+    RPMI_TEE_SRV_TEE_COMPLETE    = 0x03,
 	RPMI_TEE_SRV_ID_MAX_COUNT,
 };
 
@@ -1464,7 +1466,7 @@ static void optee_smccc_smc(unsigned long a0, unsigned long a1,
     pr_warn("optee_smccc_smc - riscv archtecture call sbi rpxy here\n");
 	ret = sbi_rpxy_send_normal_message(rpxy_ctx.tpid,
 					   RPMI_SRVGRP_TEE,
-					   RPMI_TEE_SRV_GENERAL,
+					   RPMI_TEE_SRV_TEE_COMMUNICATE,
 					   &tx, sizeof(struct rpmi_tee_tx), &rx, &rxmsg_len);
 	res->a0 = ret;
 	res->a1 = rx.value;
@@ -1684,6 +1686,7 @@ static int sbi_rpxy_tee_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+#if 0
 	ret = of_property_read_u32(pdev->dev.of_node,
 				   "riscv,sbi-rpxy-transport-id",
 				   &tpid);
@@ -1700,6 +1703,12 @@ static int sbi_rpxy_tee_probe(struct platform_device *pdev)
 	rpxy_ctx.max_msg_len = max_msg_len;
 
 	return ret;
+#else
+	rpxy_ctx.tpid = 0x0;
+	rpxy_ctx.max_msg_len = 0x1000;
+
+	return 0;
+#endif
 }
 
 static int optee_probe(struct platform_device *pdev)
@@ -1794,7 +1803,9 @@ static int optee_probe(struct platform_device *pdev)
 		 */
 		arg_cache_flags = OPTEE_SHM_ARG_SHARED |
 				  OPTEE_SHM_ARG_ALLOC_PRIV;
+		dev_err(&pdev->dev, "### optee_config_shm_memremap before ###\n");
 		pool = optee_config_shm_memremap(invoke_fn, &memremaped_shm);
+		dev_err(&pdev->dev, "### optee_config_shm_memremap after ###\n");
 	}
 
 	if (IS_ERR(pool))
