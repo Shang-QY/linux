@@ -1407,7 +1407,7 @@ optee_config_shm_memremap(optee_invoke_fn *invoke_fn, void **memremaped_shm)
 }
 
 
-#define RPMI_SRVGRP_TEE 0x00008
+#define RPMI_SRVGRP_TEE 0x0000A
 enum rpmi_tee_service_id {
 	RPMI_TEE_SRV_TEE_VERSION     = 0x01,
     RPMI_TEE_SRV_TEE_COMMUNICATE = 0x02,
