@@ -1449,6 +1449,8 @@ static void optee_smccc_smc(unsigned long a0, unsigned long a1,
 #ifndef CONFIG_RISCV
 	arm_smccc_smc(a0, a1, a2, a3, a4, a5, a6, a7, res);
 #else
+
+#if 0
 	struct rpmi_tee_tx tx;
 	struct rpmi_tee_rx rx;
 	unsigned long rxmsg_len;
@@ -1472,14 +1474,18 @@ static void optee_smccc_smc(unsigned long a0, unsigned long a1,
 	res->a1 = rx.value;
 	res->a2 = rx.extp1;
 	res->a3 = rx.extp2;
-
-	/* Follow the code here https://github.com/ventanamicro/linux/commit/dd079a401532f84a5753828af9bf6a2dc10c8375#diff-06a5bbc4d6f52fa526899420c616095363ce108603272dadd836a036bdb35ab0
+	//Follow the code here https://github.com/ventanamicro/linux/commit/dd079a401532f84a5753828af9bf6a2dc10c8375#diff-06a5bbc4d6f52fa526899420c616095363ce108603272dadd836a036bdb35ab0
+#else
 	struct sbiret ret;
+	/* a0:fid, a1~a6 as parameter*/
 	ret = sbi_ecall(SBI_EXT_OPTEE, a0, a1, a2, a3, a4, a5, a6);
+	/* riscv ecall return value only use (a0,a1),
+	 * but arm use a0,a1,a2,a3, need to be check!*/
 	res->a0 = ret.error;
 	res->a1 = ret.value;
 	res->a2 = ret.extp1;
-	res->a3 = ret.extp2; */
+	res->a3 = ret.extp2;
+#endif
 #endif
 }
 
@@ -1725,9 +1731,11 @@ static int optee_probe(struct platform_device *pdev)
 	u32 sec_caps;
 	int rc;
 
+#if 0
 	rc = sbi_rpxy_tee_probe(pdev);
 	if (rc)
 		return rc;
+#endif
 
 	invoke_fn = get_invoke_func(&pdev->dev);
 	if (IS_ERR(invoke_fn))

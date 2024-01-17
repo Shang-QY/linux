@@ -36,6 +36,7 @@ enum sbi_ext_id {
 	SBI_EXT_CPPC = 0x43505043,
 	SBI_EXT_RPXY = 0x52505859,
 	SBI_EXT_SSE = 0x535345,
+	SBI_EXT_OPTEE = 0x4F505445,
 
 	/* Experimentals extensions must lie within this range */
 	SBI_EXT_EXPERIMENTAL_START = 0x08000000,
@@ -440,6 +441,8 @@ extern unsigned long sbi_spec_version;
 struct sbiret {
 	long error;
 	long value;
+	long extp1;
+	long extp2;
 };
 
 void sbi_init(void);
