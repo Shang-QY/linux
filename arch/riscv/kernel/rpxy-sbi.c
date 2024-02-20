@@ -25,7 +25,7 @@ DEFINE_STATIC_KEY_FALSE(sbi_rpxy_available);
 #define sbi_rpxy_available() \
 	static_branch_unlikely(&sbi_rpxy_available)
 
-int sbi_rpxy_srvgrp_probe(u32 transportid, u32 srvgrpid, unsigned long *val)
+int sbi_rpxy_srvgrp_probe(u32 protocolid, u32 transportid, u32 srvgrpid, unsigned long *val)
 {
 	struct sbiret sret;
 	struct sbi_rpxy *rpxy;
@@ -37,7 +37,7 @@ int sbi_rpxy_srvgrp_probe(u32 transportid, u32 srvgrpid, unsigned long *val)
 
 	get_cpu();
 	sret = sbi_ecall(SBI_EXT_RPXY, SBI_EXT_RPXY_PROBE,
-		  transportid, srvgrpid, 0, 0, 0, 0);
+		  protocolid, transportid, srvgrpid, 0, 0, 0);
 	if (val)
 		*val = sret.value;
 	put_cpu();
@@ -46,7 +46,7 @@ int sbi_rpxy_srvgrp_probe(u32 transportid, u32 srvgrpid, unsigned long *val)
 }
 EXPORT_SYMBOL(sbi_rpxy_srvgrp_probe);
 
-int sbi_rpxy_send_normal_message(u32 transportid, u32 srvgrpid, u8 srvid,
+int sbi_rpxy_send_normal_message(u32 protocolid, u32 transportid, u32 srvgrpid, u8 srvid,
 				 void *tx, unsigned long tx_msglen,
 				 void *rx, unsigned long *rx_msglen)
 {
@@ -62,7 +62,7 @@ int sbi_rpxy_send_normal_message(u32 transportid, u32 srvgrpid, u8 srvid,
 
 	/* Shared memory is copied with message data at 0x0 offset */
 	sret = sbi_ecall(SBI_EXT_RPXY, SBI_EXT_RPXY_SEND_NORMAL_MSG,
-			 transportid, srvgrpid, srvid, tx_msglen, 0, 0);
+			 protocolid, transportid, srvgrpid, srvid, tx_msglen, 0);
 
 	if (!sret.error && rx) {
 		memcpy(rx, rpxy->shmem, sret.value);
@@ -75,8 +75,8 @@ int sbi_rpxy_send_normal_message(u32 transportid, u32 srvgrpid, u8 srvid,
 }
 EXPORT_SYMBOL(sbi_rpxy_send_normal_message);
 
-int sbi_rpxy_send_posted_message(u32 transportid, u32 srvgrpid, u8 srvid,
-				 void *tx, unsigned long tx_msglen)
+int sbi_rpxy_send_posted_message(u32 protocolid, u32 transportid, u32 srvgrpid,
+				 u8 srvid, void *tx, unsigned long tx_msglen)
 {
 	struct sbiret sret;
 	struct sbi_rpxy *rpxy = this_cpu_ptr(&sbi_rpxy);
@@ -90,14 +90,14 @@ int sbi_rpxy_send_posted_message(u32 transportid, u32 srvgrpid, u8 srvid,
 
 	/* Shared memory is copied with message data at 0x0 offset */
 	sret = sbi_ecall(SBI_EXT_RPXY, SBI_EXT_RPXY_SEND_POSTED_MSG,
-			 transportid, srvgrpid, srvid, tx_msglen, 0, 0);
+			 protocolid, transportid, srvgrpid, srvid, tx_msglen, 0);
 	put_cpu();
 
 	return sbi_err_map_linux_errno(sret.error);
 }
 EXPORT_SYMBOL(sbi_rpxy_send_posted_message);
 
-int sbi_rpxy_get_notifications(u32 transportid, u32 srvgrpid,
+int sbi_rpxy_get_notifications(u32 protocolid, u32 transportid, u32 srvgrpid,
 			       void *rx, unsigned long *rx_msglen)
 {
 	struct sbiret sret;
@@ -108,7 +108,7 @@ int sbi_rpxy_get_notifications(u32 transportid, u32 srvgrpid,
 
 	get_cpu();
 	sret = sbi_ecall(SBI_EXT_RPXY, SBI_EXT_RPXY_GET_NOTIFICATIONS,
-			transportid, srvgrpid, 0, 0, 0, 0);
+			protocolid, transportid, srvgrpid, 0, 0, 0);
 
 	if (!sret.error && rx) {
 		memcpy(rx, rpxy->shmem, sret.value);

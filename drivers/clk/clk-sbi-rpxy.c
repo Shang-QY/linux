@@ -52,6 +52,10 @@ enum sbi_rpxy_clk_type {
 	SBI_RPXY_CLK_TYPE_MAX_IDX,
 };
 
+enum sbi_rpxy_protocol_rpmi {
+	SBI_RPXY_PROT_RPMI = 0,
+};
+
 struct sbi_rpxy_ctx {
 	/* transport id */
 	u32 tpid;
@@ -157,7 +161,7 @@ static int sbi_rpxy_clk_get_num_clocks(void)
 	int ret;
 	struct rpmi_get_num_clocks_rx rx;
 
-	ret = sbi_rpxy_send_normal_message(rpxy_ctx.tpid,
+	ret = sbi_rpxy_send_normal_message(SBI_RPXY_PROT_RPMI, rpxy_ctx.tpid,
 					   RPMI_SRVGRP_CLOCK,
 					   RPMI_CLK_SRV_GET_SYSTEM_CLOCKS,
 					   NULL, 0, &rx, NULL);
@@ -178,7 +182,7 @@ static int sbi_rpxy_clk_get_attrs(u32 clkid, struct sbi_rpxy_clk *rpxy_clk)
 	struct rpmi_get_attrs_rx rx;
 
 	tx.clkid = cpu_to_le32(clkid);
-	ret = sbi_rpxy_send_normal_message(rpxy_ctx.tpid,
+	ret = sbi_rpxy_send_normal_message(SBI_RPXY_PROT_RPMI, rpxy_ctx.tpid,
 					RPMI_SRVGRP_CLOCK,
 					RPMI_CLK_SRV_GET_ATTRIBUTES,
 					&tx, sizeof(struct rpmi_get_attrs_tx),
@@ -213,7 +217,7 @@ static int sbi_rpxy_clk_get_supported_rates(u32 clkid,
 
 	tx.clkid = cpu_to_le32(clkid);
 	tx.clk_rate_idx = 0;
-	ret = sbi_rpxy_send_normal_message(rpxy_ctx.tpid,
+	ret = sbi_rpxy_send_normal_message(SBI_RPXY_PROT_RPMI, rpxy_ctx.tpid,
 					RPMI_SRVGRP_CLOCK,
 					RPMI_CLK_SRV_GET_SUPPORTED_RATES,
 					&tx, sizeof(struct rpmi_get_supp_rates_tx),
@@ -238,7 +242,7 @@ static int sbi_rpxy_clk_get_supported_rates(u32 clkid,
 			while (rx.remaining) {
 				clk_rate_idx += rx.returned;
 				tx.clk_rate_idx = clk_rate_idx;
-				ret = sbi_rpxy_send_normal_message(rpxy_ctx.tpid,
+				ret = sbi_rpxy_send_normal_message(SBI_RPXY_PROT_RPMI, rpxy_ctx.tpid,
 					RPMI_SRVGRP_CLOCK,
 					RPMI_CLK_SRV_GET_SUPPORTED_RATES,
 					&tx, sizeof(struct rpmi_get_supp_rates_tx),
@@ -277,7 +281,7 @@ static unsigned long sbi_rpxy_clk_recalc_rate(struct clk_hw *hw,
 
 	tx.clkid = cpu_to_le32(rpxy_clk->id);
 
-	ret = sbi_rpxy_send_normal_message(rpxy_ctx.tpid,
+	ret = sbi_rpxy_send_normal_message(SBI_RPXY_PROT_RPMI, rpxy_ctx.tpid,
 					   RPMI_SRVGRP_CLOCK,
 					   RPMI_CLK_SRV_GET_RATE,
 					   &tx, sizeof(struct rpmi_get_rate_tx),
@@ -329,7 +333,7 @@ static int sbi_rpxy_clk_set_rate(struct clk_hw *hw,
 	tx.lo = cpu_to_le32(GET_RATE_LO_U32(rate));
 	tx.hi = cpu_to_le32(GET_RATE_HI_U32(rate));
 
-	ret = sbi_rpxy_send_normal_message(rpxy_ctx.tpid,
+	ret = sbi_rpxy_send_normal_message(SBI_RPXY_PROT_RPMI, rpxy_ctx.tpid,
 					   RPMI_SRVGRP_CLOCK,
 					   RPMI_CLK_SRV_SET_RATE,
 					   &tx, sizeof(struct rpmi_set_rate_tx),
@@ -351,7 +355,7 @@ static int sbi_rpxy_clk_enable(struct clk_hw *hw)
 	tx.config = cpu_to_le32(SBI_RPXY_CLK_ENABLE);
 	tx.clkid = cpu_to_le32(rpxy_clk->id);
 
-	ret = sbi_rpxy_send_normal_message(rpxy_ctx.tpid,
+	ret = sbi_rpxy_send_normal_message(SBI_RPXY_PROT_RPMI, rpxy_ctx.tpid,
 					   RPMI_SRVGRP_CLOCK,
 					   RPMI_CLK_SRV_SET_CONFIG,
 					   &tx, sizeof(struct rpmi_set_config_tx),
@@ -372,7 +376,7 @@ static void sbi_rpxy_clk_disable(struct clk_hw *hw)
 	tx.config = cpu_to_le32(SBI_RPXY_CLK_DISABLE);
 	tx.clkid = cpu_to_le32(rpxy_clk->id);
 
-	sbi_rpxy_send_normal_message(rpxy_ctx.tpid,
+	sbi_rpxy_send_normal_message(SBI_RPXY_PROT_RPMI, rpxy_ctx.tpid,
 					   RPMI_SRVGRP_CLOCK,
 					   RPMI_CLK_SRV_SET_CONFIG,
 					   &tx, sizeof(struct rpmi_set_config_tx),
@@ -458,7 +462,7 @@ static int sbi_rpxy_clk_probe(struct platform_device *pdev)
 	if (ret)
 		return -EINVAL;
 
-	ret = sbi_rpxy_srvgrp_probe(tpid, RPMI_SRVGRP_CLOCK, &max_msg_len);
+	ret = sbi_rpxy_srvgrp_probe(SBI_RPXY_PROT_RPMI, tpid, RPMI_SRVGRP_CLOCK, &max_msg_len);
 	if (!max_msg_len) {
 		dev_err(&pdev->dev, "RPMI Clock Service Group Probe Failed\n");
 		return -ENODEV;

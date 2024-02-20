@@ -540,16 +540,16 @@ struct sbi_cppc_data {
 void sbi_cppc_read(void *read_data);
 void sbi_cppc_write(void *write_data);
 
-int sbi_rpxy_srvgrp_probe(u32 transportid, u32 srvgrpid, unsigned long *val);
+int sbi_rpxy_srvgrp_probe(u32 protocolid, u32 transportid, u32 srvgrpid, unsigned long *val);
 
-int sbi_rpxy_send_normal_message(u32 transportid, u32 srvgrpid, u8 srvid,
+int sbi_rpxy_send_normal_message(u32 protocolid, u32 transportid, u32 srvgrpid, u8 srvid,
 				 void *tx, unsigned long tx_msglen,
 				 void *rx, unsigned long *rx_msglen);
 
-int sbi_rpxy_send_posted_message(u32 transportid, u32 srvgrpid, u8 srvid,
+int sbi_rpxy_send_posted_message(u32 protocolid, u32 transportid, u32 srvgrpid, u8 srvid,
 				 void *tx, unsigned long tx_msglen);
 
-int sbi_rpxy_get_notifications(u32 transportid, u32 srvgrpid,
+int sbi_rpxy_get_notifications(u32 protocolid, u32 transportid, u32 srvgrpid,
 			       void *rx, unsigned long *rx_msglen);
 
 #endif /* _ASM_RISCV_SBI_H */
